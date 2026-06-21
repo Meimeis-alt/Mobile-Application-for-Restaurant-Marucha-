@@ -32,7 +32,7 @@ class Product
             INNER JOIN categoria c 
                 ON p.id_categoria = c.id_categoria
             WHERE p.disponible = 1
-              AND c.activo = 1
+                AND c.activo = 1
             ORDER BY p.nombre ASC
         ";
 
