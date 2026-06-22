@@ -11,15 +11,23 @@ object RetrofitClient {
         level = HttpLoggingInterceptor.Level.BODY
     }
 
-    private val client = OkHttpClient.Builder()
+    private val okHttpClient = OkHttpClient.Builder()
         .addInterceptor(loggingInterceptor)
         .build()
 
-    private val retrofit: Retrofit = Retrofit.Builder()
-        .baseUrl(ApiConstants.BASE_URL)
-        .client(client)
-        .addConverterFactory(GsonConverterFactory.create())
-        .build()
+    private val retrofit: Retrofit by lazy {
+        Retrofit.Builder()
+            .baseUrl(ApiConstants.BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
 
-    val authApiService: AuthApiService = retrofit.create(AuthApiService::class.java)
+    val authApiService: AuthApiService by lazy {
+        retrofit.create(AuthApiService::class.java)
+    }
+
+    val productApiService: ProductApiService by lazy {
+        retrofit.create(ProductApiService::class.java)
+    }
 }

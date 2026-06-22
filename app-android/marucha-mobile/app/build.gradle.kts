@@ -70,6 +70,7 @@ dependencies {
 
     // Coil
     implementation("io.coil-kt:coil-compose:2.7.0")
+    implementation(libs.androidx.ui)
 
     // Unit tests
     testImplementation("junit:junit:4.13.2")

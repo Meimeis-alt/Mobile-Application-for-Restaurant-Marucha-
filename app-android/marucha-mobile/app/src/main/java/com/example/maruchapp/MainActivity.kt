@@ -3,15 +3,28 @@ package com.example.maruchapp
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Surface
+import androidx.compose.ui.Modifier
+import androidx.navigation.compose.rememberNavController
 import com.example.maruchapp.ui.navigation.AppNavigation
 import com.example.maruchapp.ui.theme.MaruchAPPTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+
         setContent {
             MaruchAPPTheme {
-                AppNavigation()
+                val navController = rememberNavController()
+
+                Surface(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    AppNavigation(navController = navController)
+                }
             }
         }
     }
