@@ -15,7 +15,9 @@ import com.example.maruchapp.data.model.CartAddRequest
 import com.example.maruchapp.data.remote.RetrofitClient
 import com.example.maruchapp.ui.screens.auth.LoginScreen
 import com.example.maruchapp.ui.screens.cart.CartScreen
+import com.example.maruchapp.ui.screens.checkout.CheckoutScreen
 import com.example.maruchapp.ui.screens.home.HomeScreen
+import com.example.maruchapp.ui.screens.orders.OrderDetailScreen
 import com.example.maruchapp.ui.screens.orders.OrdersScreen
 import com.example.maruchapp.ui.screens.product.ProductDetailScreen
 import com.example.maruchapp.ui.screens.profile.ProfileScreen
@@ -85,7 +87,11 @@ private fun MainScreenContainer() {
             }
 
             composable(BottomNavItem.Orders.route) {
-                OrdersScreen()
+                OrdersScreen(
+                    onOrderClick = { orderId ->
+                        bottomNavController.navigate("order_detail/$orderId")
+                    }
+                )
             }
 
             composable(BottomNavItem.Profile.route) {
@@ -146,8 +152,39 @@ private fun MainScreenContainer() {
                 CartScreen(
                     onBack = {
                         bottomNavController.popBackStack()
+                    },
+                    onContinueCheckout = {
+                        bottomNavController.navigate("checkout")
                     }
                 )
+            }
+            composable("checkout") {
+                CheckoutScreen(
+                    onBack = {
+                        bottomNavController.popBackStack()
+                    },
+                    onOrderCreated = {
+                        bottomNavController.navigate(BottomNavItem.Orders.route) {
+                            popUpTo(BottomNavItem.Home.route) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                )
+            }
+            composable("order_detail/{orderId}") { backStackEntry ->
+                val orderId = backStackEntry.arguments?.getString("orderId")?.toIntOrNull()
+
+                if (orderId != null) {
+                    OrderDetailScreen(
+                        orderId = orderId,
+                        onBack = {
+                            bottomNavController.popBackStack()
+                        }
+                    )
+                }
             }
         }
     }
