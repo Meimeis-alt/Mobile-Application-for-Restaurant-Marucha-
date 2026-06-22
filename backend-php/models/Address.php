@@ -15,31 +15,60 @@ class Address
     }
 
     public function getByUserId(int $userId): array
-    {
-        $sql = "
-            SELECT
-                id_direccion,
-                id_usuario,
-                alias,
-                direccion_texto,
-                referencia,
-                latitud,
-                longitud,
-                es_principal,
-                fecha_registro
-            FROM direccion_usuario
-            WHERE id_usuario = :id_usuario
-            ORDER BY es_principal DESC, id_direccion DESC
-        ";
+{
+    $sql = "
+        SELECT
+            id_direccion,
+            id_usuario,
+            alias,
+            direccion_texto,
+            referencia,
+            latitud,
+            longitud,
+            es_principal,
+            fecha_registro
+        FROM direccion_usuario
+        WHERE id_usuario = :id_usuario
+        ORDER BY es_principal DESC, id_direccion DESC
+    ";
 
-        $stmt = $this->connection->prepare($sql);
-        $stmt->bindValue(':id_usuario', $userId, PDO::PARAM_INT);
-        $stmt->execute();
+    $stmt = $this->connection->prepare($sql);
+    $stmt->bindValue(':id_usuario', $userId, PDO::PARAM_INT);
+    $stmt->execute();
 
-        return $stmt->fetchAll();
-    }
+    $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    public function create(array $data): int
+    return is_array($result) ? $result : [];
+}
+
+    public function findById(int $addressId): array|false
+{
+    $sql = "
+        SELECT
+            id_direccion,
+            id_usuario,
+            alias,
+            direccion_texto,
+            referencia,
+            latitud,
+            longitud,
+            es_principal,
+            fecha_registro
+        FROM direccion_usuario
+        WHERE id_direccion = :id_direccion
+        LIMIT 1
+    ";
+
+    $stmt = $this->connection->prepare($sql);
+    $stmt->bindValue(':id_direccion', $addressId, PDO::PARAM_INT);
+    $stmt->execute();
+
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    return is_array($result) ? $result : false;
+}
+
+    public function create(array $data): int|false
     {
         $sql = "
             INSERT INTO direccion_usuario (
@@ -70,71 +99,48 @@ class Address
         $stmt->bindValue(':longitud', $data['longitud']);
         $stmt->bindValue(':es_principal', $data['es_principal'], PDO::PARAM_INT);
 
-        $stmt->execute();
+        if (!$stmt->execute()) {
+            return false;
+        }
 
-        return (int) $this->connection->lastInsertId();
+        return (int)$this->connection->lastInsertId();
     }
 
-    public function findById(int $addressId): array|false
+    public function update(int $addressId, array $data): bool
     {
         $sql = "
-            SELECT
-                id_direccion,
-                id_usuario,
-                alias,
-                direccion_texto,
-                referencia,
-                latitud,
-                longitud,
-                es_principal,
-                fecha_registro
-            FROM direccion_usuario
+            UPDATE direccion_usuario
+            SET
+                alias = :alias,
+                direccion_texto = :direccion_texto,
+                referencia = :referencia,
+                latitud = :latitud,
+                longitud = :longitud,
+                es_principal = :es_principal
             WHERE id_direccion = :id_direccion
-            LIMIT 1
         ";
 
         $stmt = $this->connection->prepare($sql);
+        $stmt->bindValue(':alias', $data['alias']);
+        $stmt->bindValue(':direccion_texto', $data['direccion_texto']);
+        $stmt->bindValue(':referencia', $data['referencia']);
+        $stmt->bindValue(':latitud', $data['latitud']);
+        $stmt->bindValue(':longitud', $data['longitud']);
+        $stmt->bindValue(':es_principal', $data['es_principal'], PDO::PARAM_INT);
         $stmt->bindValue(':id_direccion', $addressId, PDO::PARAM_INT);
-        $stmt->execute();
 
-        return $stmt->fetch();
+        return $stmt->execute();
     }
-    public function update(int $addressId, array $data): bool
-{
-    $sql = "
-        UPDATE direccion_usuario
-        SET
-            alias = :alias,
-            direccion_texto = :direccion_texto,
-            referencia = :referencia,
-            latitud = :latitud,
-            longitud = :longitud,
-            es_principal = :es_principal
-        WHERE id_direccion = :id_direccion
-    ";
-
-    $stmt = $this->connection->prepare($sql);
-    $stmt->bindValue(':alias', $data['alias']);
-    $stmt->bindValue(':direccion_texto', $data['direccion_texto']);
-    $stmt->bindValue(':referencia', $data['referencia']);
-    $stmt->bindValue(':latitud', $data['latitud']);
-    $stmt->bindValue(':longitud', $data['longitud']);
-    $stmt->bindValue(':es_principal', $data['es_principal'], PDO::PARAM_INT);
-    $stmt->bindValue(':id_direccion', $addressId, PDO::PARAM_INT);
-
-    return $stmt->execute();
-}
 
     public function delete(int $addressId): bool
     {
         $sql = "DELETE FROM direccion_usuario WHERE id_direccion = :id_direccion";
-    
         $stmt = $this->connection->prepare($sql);
         $stmt->bindValue(':id_direccion', $addressId, PDO::PARAM_INT);
-    
+
         return $stmt->execute();
     }
-    
+
     public function clearPrimaryByUserId(int $userId): bool
     {
         $sql = "
@@ -142,10 +148,10 @@ class Address
             SET es_principal = 0
             WHERE id_usuario = :id_usuario
         ";
-    
+
         $stmt = $this->connection->prepare($sql);
         $stmt->bindValue(':id_usuario', $userId, PDO::PARAM_INT);
-    
+
         return $stmt->execute();
     }
 }

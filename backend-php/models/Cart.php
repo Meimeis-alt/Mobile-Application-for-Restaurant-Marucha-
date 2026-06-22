@@ -36,7 +36,7 @@ class Cart
         return $stmt->fetch();
     }
 
-    public function createCart(int $userId): int
+    public function createCart(int $userId): int|false
     {
         $sql = "
             INSERT INTO carrito (id_usuario, estado)
@@ -45,9 +45,12 @@ class Cart
 
         $stmt = $this->connection->prepare($sql);
         $stmt->bindValue(':id_usuario', $userId, PDO::PARAM_INT);
-        $stmt->execute();
 
-        return (int) $this->connection->lastInsertId();
+        if (!$stmt->execute()) {
+            return false;
+        }
+
+        return (int)$this->connection->lastInsertId();
     }
 
     public function getCartItems(int $cartId): array
@@ -76,7 +79,7 @@ class Cart
         return $stmt->fetchAll();
     }
 
-    public function findCartItemByCartAndPlatillo(int $cartId, int $platilloId): array|false
+    public function findCartItemByCartAndPlatillo(int $cartId, int $productId): array|false
     {
         $sql = "
             SELECT
@@ -94,13 +97,13 @@ class Cart
 
         $stmt = $this->connection->prepare($sql);
         $stmt->bindValue(':id_carrito', $cartId, PDO::PARAM_INT);
-        $stmt->bindValue(':id_platillo', $platilloId, PDO::PARAM_INT);
+        $stmt->bindValue(':id_platillo', $productId, PDO::PARAM_INT);
         $stmt->execute();
 
         return $stmt->fetch();
     }
 
-    public function createCartItem(array $data): int
+    public function createCartItem(array $data): int|false
     {
         $sql = "
             INSERT INTO carrito_detalle (
@@ -124,30 +127,35 @@ class Cart
         $stmt->bindValue(':cantidad', $data['cantidad'], PDO::PARAM_INT);
         $stmt->bindValue(':precio_unitario', $data['precio_unitario']);
         $stmt->bindValue(':subtotal', $data['subtotal']);
-        $stmt->execute();
 
-        return (int) $this->connection->lastInsertId();
+        if (!$stmt->execute()) {
+            return false;
+        }
+
+        return (int)$this->connection->lastInsertId();
     }
 
-    public function updateCartItem(int $cartItemId, int $quantity, float $subtotal): bool
+    public function updateCartItem(int $cartDetailId, array $data): bool
     {
         $sql = "
             UPDATE carrito_detalle
             SET
                 cantidad = :cantidad,
+                precio_unitario = :precio_unitario,
                 subtotal = :subtotal
             WHERE id_carrito_detalle = :id_carrito_detalle
         ";
 
         $stmt = $this->connection->prepare($sql);
-        $stmt->bindValue(':cantidad', $quantity, PDO::PARAM_INT);
-        $stmt->bindValue(':subtotal', $subtotal);
-        $stmt->bindValue(':id_carrito_detalle', $cartItemId, PDO::PARAM_INT);
+        $stmt->bindValue(':cantidad', $data['cantidad'], PDO::PARAM_INT);
+        $stmt->bindValue(':precio_unitario', $data['precio_unitario']);
+        $stmt->bindValue(':subtotal', $data['subtotal']);
+        $stmt->bindValue(':id_carrito_detalle', $cartDetailId, PDO::PARAM_INT);
 
         return $stmt->execute();
     }
 
-    public function findCartItemById(int $cartItemId): array|false
+    public function findCartItemById(int $cartDetailId): array|false
     {
         $sql = "
             SELECT
@@ -163,62 +171,41 @@ class Cart
         ";
 
         $stmt = $this->connection->prepare($sql);
-        $stmt->bindValue(':id_carrito_detalle', $cartItemId, PDO::PARAM_INT);
+        $stmt->bindValue(':id_carrito_detalle', $cartDetailId, PDO::PARAM_INT);
         $stmt->execute();
 
         return $stmt->fetch();
     }
-    public function deleteCartItem(int $cartItemId): bool
+
+    public function deleteCartItem(int $cartDetailId): bool
     {
-    $sql = "DELETE FROM carrito_detalle WHERE id_carrito_detalle = :id_carrito_detalle";
+        $sql = "DELETE FROM carrito_detalle WHERE id_carrito_detalle = :id_carrito_detalle";
+        $stmt = $this->connection->prepare($sql);
+        $stmt->bindValue(':id_carrito_detalle', $cartDetailId, PDO::PARAM_INT);
 
-    $stmt = $this->connection->prepare($sql);
-    $stmt->bindValue(':id_carrito_detalle', $cartItemId, PDO::PARAM_INT);
-
-    return $stmt->execute();
+        return $stmt->execute();
     }
-    public function markAsConverted(int $cartId): bool
-{
-    $sql = "
-        UPDATE carrito
-        SET estado = 'convertido'
-        WHERE id_carrito = :id_carrito
-    ";
 
-    $stmt = $this->connection->prepare($sql);
-    $stmt->bindValue(':id_carrito', $cartId, PDO::PARAM_INT);
+    public function clearCartItems(int $cartId): bool
+    {
+        $sql = "DELETE FROM carrito_detalle WHERE id_carrito = :id_carrito";
+        $stmt = $this->connection->prepare($sql);
+        $stmt->bindValue(':id_carrito', $cartId, PDO::PARAM_INT);
 
-    return $stmt->execute();
-}
-public function updateCartStatus(int $cartId, string $status): bool
-{
-    $sql = "
-        UPDATE carrito
-        SET estado = :estado
-        WHERE id_carrito = :id_carrito
-    ";
+        return $stmt->execute();
+    }
 
-    $stmt = $this->connection->prepare($sql);
-    $stmt->bindValue(':estado', $status);
-    $stmt->bindValue(':id_carrito', $cartId, PDO::PARAM_INT);
+    public function markCartAsCompleted(int $cartId): bool
+    {
+        $sql = "
+            UPDATE carrito
+            SET estado = 'cerrado'
+            WHERE id_carrito = :id_carrito
+        ";
 
-    return $stmt->execute();
-}
+        $stmt = $this->connection->prepare($sql);
+        $stmt->bindValue(':id_carrito', $cartId, PDO::PARAM_INT);
 
-public function getCartTotal(int $cartId): float
-{
-    $sql = "
-        SELECT COALESCE(SUM(subtotal), 0) AS total
-        FROM carrito_detalle
-        WHERE id_carrito = :id_carrito
-    ";
-
-    $stmt = $this->connection->prepare($sql);
-    $stmt->bindValue(':id_carrito', $cartId, PDO::PARAM_INT);
-    $stmt->execute();
-
-    $result = $stmt->fetch();
-
-    return (float) ($result['total'] ?? 0);
-}
+        return $stmt->execute();
+    }
 }

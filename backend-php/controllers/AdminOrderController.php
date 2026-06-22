@@ -67,36 +67,37 @@ class AdminOrderController
             );
         }
     }
+
     public function updateStatus(int $orderId): void
-{
-    try {
-        $requestData = json_decode(file_get_contents('php://input'), true);
+    {
+        try {
+            $requestData = json_decode(file_get_contents('php://input'), true);
 
-        if (!is_array($requestData)) {
-            Response::error('Invalid JSON body', 400);
-        }
+            if (!is_array($requestData)) {
+                Response::error('Invalid JSON body', 400);
+            }
 
-        $result = $this->adminOrderService->updateOrderStatus($orderId, $requestData);
+            $result = $this->adminOrderService->updateOrderStatus($orderId, $requestData);
 
-        if (!$result['success']) {
-            Response::error(
+            if (!$result['success']) {
+                Response::error(
+                    $result['message'],
+                    $result['status'],
+                    $result['data'] ?? null
+                );
+            }
+
+            Response::success(
                 $result['message'],
-                $result['status'],
-                $result['data'] ?? null
+                $result['data'],
+                $result['status']
+            );
+        } catch (Throwable $e) {
+            Response::error(
+                'Error updating order status',
+                500,
+                ['error' => $e->getMessage()]
             );
         }
-
-        Response::success(
-            $result['message'],
-            $result['data'],
-            $result['status']
-        );
-    } catch (Throwable $e) {
-        Response::error(
-            'Error updating order status',
-            500,
-            ['error' => $e->getMessage()]
-        );
     }
-}
 }

@@ -14,9 +14,9 @@ class UserService
         $this->userModel = new User();
     }
 
-    public function getUserById(int $id): array
+    public function getById(int $userId): array
     {
-        $user = $this->userModel->findById($id);
+        $user = $this->userModel->findById($userId);
 
         if (!$user) {
             return [
@@ -34,9 +34,9 @@ class UserService
         ];
     }
 
-    public function updateUserProfile(int $id, array $data): array
+    public function update(int $userId, array $data): array
     {
-        $user = $this->userModel->findById($id);
+        $user = $this->userModel->findById($userId);
 
         if (!$user) {
             return [
@@ -46,10 +46,19 @@ class UserService
             ];
         }
 
-        $errors = Validator::validateRequired($data, [
-            'nombre',
-            'apellido'
-        ]);
+        $errors = [];
+
+        if (!isset($data['nombre']) || trim((string)$data['nombre']) === '') {
+            $errors['nombre'] = 'The field "nombre" is required.';
+        }
+
+        if (!isset($data['apellido']) || trim((string)$data['apellido']) === '') {
+            $errors['apellido'] = 'The field "apellido" is required.';
+        }
+
+        if (!isset($data['telefono']) || trim((string)$data['telefono']) === '') {
+            $errors['telefono'] = 'The field "telefono" is required.';
+        }
 
         if (!empty($errors)) {
             return [
@@ -60,28 +69,28 @@ class UserService
             ];
         }
 
-        $updateData = [
-            'nombre'   => trim($data['nombre']),
-            'apellido' => trim($data['apellido']),
-            'telefono' => $data['telefono'] ?? null
+        $payload = [
+            'nombre'   => trim((string)$data['nombre']),
+            'apellido' => trim((string)$data['apellido']),
+            'telefono' => trim((string)$data['telefono'])
         ];
 
-        $updated = $this->userModel->updateProfile($id, $updateData);
+        $updated = $this->userModel->update($userId, $payload);
 
         if (!$updated) {
             return [
                 'success' => false,
                 'status'  => 500,
-                'message' => 'Failed to update user profile'
+                'message' => 'Failed to update user'
             ];
         }
 
-        $updatedUser = $this->userModel->findById($id);
+        $updatedUser = $this->userModel->findById($userId);
 
         return [
             'success' => true,
             'status'  => 200,
-            'message' => 'User profile updated successfully',
+            'message' => 'User updated successfully',
             'data'    => $updatedUser
         ];
     }

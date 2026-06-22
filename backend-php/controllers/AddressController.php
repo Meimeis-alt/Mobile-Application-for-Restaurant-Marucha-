@@ -73,44 +73,18 @@ class AddressController
             );
         }
     }
+
     public function update(int $addressId): void
-{
-    try {
-        $requestData = json_decode(file_get_contents('php://input'), true);
-
-        if (!is_array($requestData)) {
-            Response::error('Invalid JSON body', 400);
-        }
-
-        $result = $this->addressService->updateAddress($addressId, $requestData);
-
-        if (!$result['success']) {
-            Response::error(
-                $result['message'],
-                $result['status'],
-                $result['data'] ?? null
-            );
-        }
-
-        Response::success(
-            $result['message'],
-            $result['data'],
-            $result['status']
-        );
-    } catch (Throwable $e) {
-        Response::error(
-            'Error updating address',
-            500,
-            ['error' => $e->getMessage()]
-        );
-    }
-}
-
-    public function destroy(int $addressId): void
     {
         try {
-            $result = $this->addressService->deleteAddress($addressId);
-    
+            $requestData = json_decode(file_get_contents('php://input'), true);
+
+            if (!is_array($requestData)) {
+                Response::error('Invalid JSON body', 400);
+            }
+
+            $result = $this->addressService->updateAddress($addressId, $requestData);
+
             if (!$result['success']) {
                 Response::error(
                     $result['message'],
@@ -118,10 +92,37 @@ class AddressController
                     $result['data'] ?? null
                 );
             }
-    
+
             Response::success(
                 $result['message'],
-                null,
+                $result['data'],
+                $result['status']
+            );
+        } catch (Throwable $e) {
+            Response::error(
+                'Error updating address',
+                500,
+                ['error' => $e->getMessage()]
+            );
+        }
+    }
+
+    public function delete(int $addressId): void
+    {
+        try {
+            $result = $this->addressService->deleteAddress($addressId);
+
+            if (!$result['success']) {
+                Response::error(
+                    $result['message'],
+                    $result['status'],
+                    $result['data'] ?? null
+                );
+            }
+
+            Response::success(
+                $result['message'],
+                $result['data'] ?? null,
                 $result['status']
             );
         } catch (Throwable $e) {

@@ -117,4 +117,35 @@ class User
 
         return (int) $this->connection->lastInsertId();
     }
+    public function findById(int $userId): array|false
+{
+    $sql = "
+        SELECT
+            id_usuario,
+            id_rol,
+            username,
+            nombre,
+            apellido,
+            email,
+            telefono,
+            fecha_nacimiento,
+            foto_perfil,
+            auth_provider,
+            google_id,
+            estado,
+            fecha_registro,
+            fecha_actualizacion
+        FROM usuario
+        WHERE id_usuario = :id_usuario
+        LIMIT 1
+    ";
+
+    $stmt = $this->connection->prepare($sql);
+    $stmt->bindValue(':id_usuario', $userId, PDO::PARAM_INT);
+    $stmt->execute();
+
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    return is_array($result) ? $result : false;
+}
 }

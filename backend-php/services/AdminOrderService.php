@@ -37,7 +37,7 @@ class AdminOrderService
             ];
         }
 
-        $address = $this->orderModel->findAddressById((int) $order['id_direccion']);
+        $address = $this->orderModel->findAddressById((int)$order['id_direccion']);
         $details = $this->orderModel->getOrderDetails($orderId);
 
         return [
@@ -51,71 +51,72 @@ class AdminOrderService
             ]
         ];
     }
+
     public function updateOrderStatus(int $orderId, array $data): array
-{
-    $order = $this->orderModel->getAdminOrderById($orderId);
+    {
+        $order = $this->orderModel->getAdminOrderById($orderId);
 
-    if (!$order) {
-        return [
-            'success' => false,
-            'status'  => 404,
-            'message' => 'Order not found'
-        ];
-    }
+        if (!$order) {
+            return [
+                'success' => false,
+                'status'  => 404,
+                'message' => 'Order not found'
+            ];
+        }
 
-    if (!isset($data['id_estado_pedido'])) {
+        if (!isset($data['id_estado_pedido'])) {
+            return [
+                'success' => false,
+                'status'  => 422,
+                'message' => 'Validation errors',
+                'data'    => [
+                    'id_estado_pedido' => 'The field "id_estado_pedido" is required.'
+                ]
+            ];
+        }
+
+        $statusId = (int)$data['id_estado_pedido'];
+        $comment = isset($data['comentario']) ? trim((string)$data['comentario']) : null;
+
+        $status = $this->orderModel->findOrderStatusById($statusId);
+
+        if (!$status) {
+            return [
+                'success' => false,
+                'status'  => 404,
+                'message' => 'Order status not found'
+            ];
+        }
+
+        $updated = $this->orderModel->updateOrderStatus($orderId, $statusId);
+
+        if (!$updated) {
+            return [
+                'success' => false,
+                'status'  => 500,
+                'message' => 'Failed to update order status'
+            ];
+        }
+
+        $this->orderModel->createOrderStatusHistory([
+            'id_pedido'        => $orderId,
+            'id_estado_pedido' => $statusId,
+            'comentario'       => $comment
+        ]);
+
+        $updatedOrder = $this->orderModel->getAdminOrderById($orderId);
+        $address = $this->orderModel->findAddressById((int)$updatedOrder['id_direccion']);
+        $details = $this->orderModel->getOrderDetails($orderId);
+
         return [
-            'success' => false,
-            'status'  => 422,
-            'message' => 'Validation errors',
+            'success' => true,
+            'status'  => 200,
+            'message' => 'Order status updated successfully',
             'data'    => [
-                'id_estado_pedido' => 'The field "id_estado_pedido" is required.'
+                'order'   => $updatedOrder,
+                'address' => $address,
+                'details' => $details
             ]
         ];
     }
-
-    $statusId = (int) $data['id_estado_pedido'];
-    $comment = isset($data['comentario']) ? trim((string) $data['comentario']) : null;
-
-    $status = $this->orderModel->findOrderStatusById($statusId);
-
-    if (!$status) {
-        return [
-            'success' => false,
-            'status'  => 404,
-            'message' => 'Order status not found'
-        ];
-    }
-
-    $updated = $this->orderModel->updateOrderStatus($orderId, $statusId);
-
-    if (!$updated) {
-        return [
-            'success' => false,
-            'status'  => 500,
-            'message' => 'Failed to update order status'
-        ];
-    }
-
-    $this->orderModel->createOrderStatusHistory([
-        'id_pedido'        => $orderId,
-        'id_estado_pedido' => $statusId,
-        'comentario'       => $comment
-    ]);
-
-    $updatedOrder = $this->orderModel->getAdminOrderById($orderId);
-    $address = $this->orderModel->findAddressById((int) $updatedOrder['id_direccion']);
-    $details = $this->orderModel->getOrderDetails($orderId);
-
-    return [
-        'success' => true,
-        'status'  => 200,
-        'message' => 'Order status updated successfully',
-        'data'    => [
-            'order'   => $updatedOrder,
-            'address' => $address,
-            'details' => $details
-        ]
-    ];
-}
 }

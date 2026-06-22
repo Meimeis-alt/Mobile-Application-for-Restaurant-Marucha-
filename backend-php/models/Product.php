@@ -41,4 +41,29 @@ class Product
 
         return $stmt->fetchAll();
     }
+    public function findById(int $productId): array|false
+{
+    $sql = "
+        SELECT
+            p.id_platillo,
+            p.id_categoria,
+            c.nombre AS categoria_nombre,
+            p.nombre,
+            p.descripcion,
+            p.precio,
+            p.imagen_url
+        FROM platillo p
+        INNER JOIN categoria c ON c.id_categoria = p.id_categoria
+        WHERE p.id_platillo = :id_platillo
+        LIMIT 1
+    ";
+
+    $stmt = $this->connection->prepare($sql);
+    $stmt->bindValue(':id_platillo', $productId, PDO::PARAM_INT);
+    $stmt->execute();
+
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    return is_array($result) ? $result : false;
+}
 }
