@@ -1,12 +1,17 @@
 package com.example.maruchapp.ui.screens.home
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
@@ -14,6 +19,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -30,6 +36,7 @@ fun HomeScreen(
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var products by remember { mutableStateOf<List<ProductDto>>(emptyList()) }
+    var selectedCategory by remember { mutableStateOf<String?>(null) }
 
     val scope = rememberCoroutineScope()
 
@@ -50,6 +57,40 @@ fun HomeScreen(
                 isLoading = false
             }
         }
+    }
+
+    val groupedProducts = remember(products) {
+        products.groupBy { it.categoria_nombre.ifBlank { "Otros" } }
+    }
+
+    val categoryOrder = listOf(
+        "Entradas",
+        "Segundos",
+        "Bebidas",
+        "Postres"
+    )
+
+    val orderedCategories = remember(groupedProducts) {
+        val existingCategories = groupedProducts.keys.toList()
+
+        val ordered = categoryOrder.filter { groupedProducts.containsKey(it) }
+        val remaining = existingCategories.filterNot { it in categoryOrder }.sorted()
+
+        ordered + remaining
+    }
+
+    LaunchedEffect(orderedCategories) {
+        if (selectedCategory == null && orderedCategories.isNotEmpty()) {
+            selectedCategory = if (orderedCategories.contains("Entradas")) {
+                "Entradas"
+            } else {
+                orderedCategories.first()
+            }
+        }
+    }
+
+    val visibleProducts = remember(groupedProducts, selectedCategory) {
+        groupedProducts[selectedCategory].orEmpty()
     }
 
     when {
@@ -104,25 +145,71 @@ fun HomeScreen(
                         Text(
                             text = "Carta Marucha",
                             style = MaterialTheme.typography.headlineMedium,
-                            modifier = Modifier.padding(bottom = 8.dp)
+                            modifier = Modifier.padding(bottom = 12.dp)
                         )
 
-                        Button(
-                            onClick = onGoToCart,
+                        Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(bottom = 12.dp)
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text("Ver carrito")
+                            orderedCategories.forEach { category ->
+                                val isSelected = selectedCategory == category
+
+                                if (isSelected) {
+                                    Button(
+                                        onClick = { selectedCategory = category }
+                                    ) {
+                                        Text(category)
+                                    }
+                                } else {
+                                    OutlinedButton(
+                                        onClick = { selectedCategory = category }
+                                    ) {
+                                        Text(category)
+                                    }
+                                }
+                            }
                         }
                     }
                 }
 
-                items(products) { product ->
-                    ProductCard(
-                        product = product,
-                        onClick = { onProductClick(product) }
+                item {
+                    Text(
+                        text = selectedCategory ?: "Productos",
+                        style = MaterialTheme.typography.headlineSmall,
+                        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
                     )
+                }
+
+                if (visibleProducts.isEmpty()) {
+                    item {
+                        Text(
+                            text = "No hay productos en esta categoría",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                } else {
+                    items(visibleProducts) { product ->
+                        ProductCard(
+                            product = product,
+                            onClick = { onProductClick(product) }
+                        )
+                    }
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                item {
+                    Button(
+                        onClick = onGoToCart,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Ver carrito")
+                    }
                 }
             }
         }
@@ -146,13 +233,6 @@ private fun ProductCard(
             Text(
                 text = product.nombre,
                 style = MaterialTheme.typography.titleMedium
-            )
-
-            Text(
-                text = product.categoria_nombre,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(top = 4.dp)
             )
 
             if (!product.descripcion.isNullOrBlank()) {
