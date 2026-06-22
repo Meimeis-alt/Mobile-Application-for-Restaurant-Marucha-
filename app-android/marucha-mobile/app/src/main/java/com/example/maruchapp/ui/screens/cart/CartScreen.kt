@@ -33,7 +33,8 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun CartScreen(
-    onBack: () -> Unit = {}
+    onBack: () -> Unit = {},
+    onContinueCheckout: () -> Unit = {}
 ) {
     var isLoading by remember { mutableStateOf(true) }
     var isUpdating by remember { mutableStateOf(false) }
@@ -211,7 +212,7 @@ fun CartScreen(
                         )
 
                         Button(
-                            onClick = { /* checkout luego */ },
+                            onClick = onContinueCheckout,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(top = 12.dp),
