@@ -14,6 +14,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.maruchapp.data.model.CartAddRequest
 import com.example.maruchapp.data.remote.RetrofitClient
 import com.example.maruchapp.ui.screens.auth.LoginScreen
+import com.example.maruchapp.ui.screens.cart.CartScreen
 import com.example.maruchapp.ui.screens.home.HomeScreen
 import com.example.maruchapp.ui.screens.orders.OrdersScreen
 import com.example.maruchapp.ui.screens.product.ProductDetailScreen
@@ -76,6 +77,9 @@ private fun MainScreenContainer() {
                     onProductClick = { product ->
                         SelectedProductHolder.product = product
                         bottomNavController.navigate("product_detail")
+                    },
+                    onGoToCart = {
+                        bottomNavController.navigate("cart")
                     }
                 )
             }
@@ -105,7 +109,6 @@ private fun MainScreenContainer() {
                                         cantidad = quantity
                                     )
 
-                                    // Por ahora usamos userId = 1 porque el login aún no persiste sesión/token
                                     val response = RetrofitClient.cartApiService.addItemToCart(
                                         userId = 1,
                                         request = request
@@ -137,6 +140,14 @@ private fun MainScreenContainer() {
                         }
                     )
                 }
+            }
+
+            composable("cart") {
+                CartScreen(
+                    onBack = {
+                        bottomNavController.popBackStack()
+                    }
+                )
             }
         }
     }
