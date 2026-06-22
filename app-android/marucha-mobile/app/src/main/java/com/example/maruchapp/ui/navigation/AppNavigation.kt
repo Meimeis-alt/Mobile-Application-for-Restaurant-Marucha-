@@ -1,18 +1,25 @@
 package com.example.maruchapp.ui.navigation
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.maruchapp.data.model.CartAddRequest
+import com.example.maruchapp.data.remote.RetrofitClient
 import com.example.maruchapp.ui.screens.auth.LoginScreen
 import com.example.maruchapp.ui.screens.home.HomeScreen
 import com.example.maruchapp.ui.screens.orders.OrdersScreen
+import com.example.maruchapp.ui.screens.product.ProductDetailScreen
 import com.example.maruchapp.ui.screens.profile.ProfileScreen
 import com.example.maruchapp.ui.screens.splash.SplashScreen
+import kotlinx.coroutines.launch
 
 @Composable
 fun AppNavigation(
@@ -51,6 +58,8 @@ fun AppNavigation(
 @Composable
 private fun MainScreenContainer() {
     val bottomNavController = rememberNavController()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     Scaffold(
         bottomBar = {
@@ -63,7 +72,12 @@ private fun MainScreenContainer() {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(BottomNavItem.Home.route) {
-                HomeScreen()
+                HomeScreen(
+                    onProductClick = { product ->
+                        SelectedProductHolder.product = product
+                        bottomNavController.navigate("product_detail")
+                    }
+                )
             }
 
             composable(BottomNavItem.Orders.route) {
@@ -72,6 +86,57 @@ private fun MainScreenContainer() {
 
             composable(BottomNavItem.Profile.route) {
                 ProfileScreen()
+            }
+
+            composable("product_detail") {
+                val selectedProduct = SelectedProductHolder.product
+
+                if (selectedProduct != null) {
+                    ProductDetailScreen(
+                        product = selectedProduct,
+                        onBack = {
+                            bottomNavController.popBackStack()
+                        },
+                        onAddToCart = { quantity ->
+                            scope.launch {
+                                try {
+                                    val request = CartAddRequest(
+                                        id_platillo = selectedProduct.id_platillo,
+                                        cantidad = quantity
+                                    )
+
+                                    // Por ahora usamos userId = 1 porque el login aún no persiste sesión/token
+                                    val response = RetrofitClient.cartApiService.addItemToCart(
+                                        userId = 1,
+                                        request = request
+                                    )
+
+                                    if (response.isSuccessful && response.body()?.success == true) {
+                                        Toast.makeText(
+                                            context,
+                                            "Producto agregado al carrito",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+
+                                        bottomNavController.popBackStack()
+                                    } else {
+                                        Toast.makeText(
+                                            context,
+                                            response.body()?.message ?: "No se pudo agregar al carrito",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                } catch (e: Exception) {
+                                    Toast.makeText(
+                                        context,
+                                        "Error: ${e.message}",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                            }
+                        }
+                    )
+                }
             }
         }
     }

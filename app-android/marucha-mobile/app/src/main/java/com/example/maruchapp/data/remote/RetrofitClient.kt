@@ -30,4 +30,8 @@ object RetrofitClient {
     val productApiService: ProductApiService by lazy {
         retrofit.create(ProductApiService::class.java)
     }
+
+    val cartApiService: CartApiService by lazy {
+        retrofit.create(CartApiService::class.java)
+    }
 }
