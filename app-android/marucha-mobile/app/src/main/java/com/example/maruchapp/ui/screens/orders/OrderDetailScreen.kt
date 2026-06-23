@@ -3,8 +3,10 @@ package com.example.maruchapp.ui.screens.orders
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Card
@@ -39,9 +41,8 @@ fun OrderDetailScreen(
 
             if (response.isSuccessful && response.body()?.success == true) {
                 orderDetail = response.body()?.data
-                errorMessage = null
             } else {
-                errorMessage = response.body()?.message ?: "No se pudo obtener el pedido"
+                errorMessage = response.body()?.message ?: "No se pudo obtener el detalle del pedido"
             }
         } catch (e: Exception) {
             errorMessage = "Error: ${e.message}"
@@ -50,7 +51,9 @@ fun OrderDetailScreen(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(
+        modifier = Modifier.fillMaxSize()
+    ) {
         TextButton(
             onClick = onBack,
             modifier = Modifier.padding(start = 8.dp, top = 8.dp)
@@ -91,12 +94,15 @@ fun OrderDetailScreen(
                         .padding(24.dp),
                     verticalArrangement = Arrangement.Center
                 ) {
-                    Text("No se encontró información del pedido")
+                    Text("No se encontró el pedido")
                 }
             }
 
             else -> {
-                val detail = orderDetail!!
+                val orderData = orderDetail!!
+                val order = orderData.order
+                val address = orderData.address
+                val details = orderData.details
 
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
@@ -117,39 +123,18 @@ fun OrderDetailScreen(
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
-                                    text = detail.order.numero_pedido,
-                                    style = MaterialTheme.typography.titleMedium
-                                )
-                                Text(
-                                    text = "Estado: ${detail.order.estado_nombre}",
-                                    modifier = Modifier.padding(top = 8.dp)
-                                )
-                                Text(
-                                    text = "Pago: ${detail.order.metodo_pago_nombre}",
-                                    modifier = Modifier.padding(top = 4.dp)
-                                )
-                                Text(
-                                    text = "Subtotal: S/ ${detail.order.subtotal}",
-                                    modifier = Modifier.padding(top = 4.dp)
-                                )
-                                Text(
-                                    text = "Total: S/ ${detail.order.total}",
-                                    modifier = Modifier.padding(top = 4.dp)
+                                    text = "Pedido ${order.numero_pedido}",
+                                    style = MaterialTheme.typography.titleLarge
                                 )
 
-                                if (!detail.order.observaciones.isNullOrBlank()) {
-                                    Text(
-                                        text = "Observaciones: ${detail.order.observaciones}",
-                                        modifier = Modifier.padding(top = 8.dp)
-                                    )
-                                }
+                                Spacer(modifier = Modifier.height(8.dp))
 
-                                if (!detail.order.fecha_pedido.isNullOrBlank()) {
-                                    Text(
-                                        text = "Fecha: ${detail.order.fecha_pedido}",
-                                        modifier = Modifier.padding(top = 8.dp),
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
+                                Text("Fecha: ${order.fecha_pedido}")
+                                Text("Total: S/ ${order.total}")
+
+                                if (!order.observaciones.isNullOrBlank()) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text("Observaciones: ${order.observaciones}")
                                 }
                             }
                         }
@@ -166,20 +151,21 @@ fun OrderDetailScreen(
                                     style = MaterialTheme.typography.titleMedium
                                 )
 
-                                Text(
-                                    text = detail.address.alias ?: "Dirección",
-                                    modifier = Modifier.padding(top = 8.dp)
-                                )
+                                Spacer(modifier = Modifier.height(8.dp))
 
-                                Text(
-                                    text = detail.address.direccion_texto,
-                                    modifier = Modifier.padding(top = 4.dp)
-                                )
+                                Text(address.alias ?: "Dirección")
+                                Text(address.direccionTexto)
 
-                                if (!detail.address.referencia.isNullOrBlank()) {
+                                if (!address.referencia.isNullOrBlank()) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text("Referencia: ${address.referencia}")
+                                }
+
+                                if (address.esPrincipal == 1) {
+                                    Spacer(modifier = Modifier.height(4.dp))
                                     Text(
-                                        text = "Referencia: ${detail.address.referencia}",
-                                        modifier = Modifier.padding(top = 4.dp)
+                                        text = "Dirección principal",
+                                        color = MaterialTheme.colorScheme.primary
                                     )
                                 }
                             }
@@ -187,36 +173,22 @@ fun OrderDetailScreen(
                     }
 
                     item {
-                        Text(
-                            text = "Productos",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                    }
-
-                    items(detail.details.size) { index ->
-                        val item = detail.details[index]
-
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                            elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
-                                    text = item.platillo_nombre,
+                                    text = "Productos",
                                     style = MaterialTheme.typography.titleMedium
                                 )
-                                Text(
-                                    text = "Cantidad: ${item.cantidad}",
-                                    modifier = Modifier.padding(top = 6.dp)
-                                )
-                                Text(
-                                    text = "Precio unitario: S/ ${item.precio_unitario}",
-                                    modifier = Modifier.padding(top = 4.dp)
-                                )
-                                Text(
-                                    text = "Subtotal: S/ ${item.subtotal}",
-                                    modifier = Modifier.padding(top = 4.dp)
-                                )
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                details.forEach { detail ->
+                                    Text("${detail.platillo_nombre} x${detail.cantidad} - S/ ${detail.subtotal}")
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                }
                             }
                         }
                     }

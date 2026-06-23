@@ -11,23 +11,27 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.maruchapp.data.local.SessionManager
 import com.example.maruchapp.data.model.CartAddRequest
 import com.example.maruchapp.data.remote.RetrofitClient
 import com.example.maruchapp.ui.screens.auth.LoginScreen
+import com.example.maruchapp.ui.screens.auth.RegisterScreen
 import com.example.maruchapp.ui.screens.cart.CartScreen
 import com.example.maruchapp.ui.screens.checkout.CheckoutScreen
 import com.example.maruchapp.ui.screens.home.HomeScreen
 import com.example.maruchapp.ui.screens.orders.OrderDetailScreen
 import com.example.maruchapp.ui.screens.orders.OrdersScreen
 import com.example.maruchapp.ui.screens.product.ProductDetailScreen
+import com.example.maruchapp.ui.screens.profile.AddressesScreen
+import com.example.maruchapp.ui.screens.profile.PaymentMethodsScreen
 import com.example.maruchapp.ui.screens.profile.ProfileScreen
 import com.example.maruchapp.ui.screens.splash.SplashScreen
 import kotlinx.coroutines.launch
 
 @Composable
-fun AppNavigation(
-    navController: NavHostController
-) {
+fun AppNavigation() {
+    val navController = rememberNavController()
+
     NavHost(
         navController = navController,
         startDestination = "splash"
@@ -36,6 +40,11 @@ fun AppNavigation(
             SplashScreen(
                 onNavigateToLogin = {
                     navController.navigate("login") {
+                        popUpTo("splash") { inclusive = true }
+                    }
+                },
+                onNavigateToMain = {
+                    navController.navigate("main") {
                         popUpTo("splash") { inclusive = true }
                     }
                 }
@@ -48,21 +57,35 @@ fun AppNavigation(
                     navController.navigate("main") {
                         popUpTo("login") { inclusive = true }
                     }
+                },
+                onGoToRegister = {
+                    navController.navigate("register")
+                }
+            )
+        }
+
+        composable("register") {
+            RegisterScreen(
+                onBackToLogin = {
+                    navController.popBackStack()
                 }
             )
         }
 
         composable("main") {
-            MainScreenContainer()
+            MainScreenContainer(rootNavController = navController)
         }
     }
 }
 
 @Composable
-private fun MainScreenContainer() {
+private fun MainScreenContainer(
+    rootNavController: NavHostController
+) {
     val bottomNavController = rememberNavController()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val session = SessionManager(context)
 
     Scaffold(
         bottomBar = {
@@ -95,7 +118,30 @@ private fun MainScreenContainer() {
             }
 
             composable(BottomNavItem.Profile.route) {
-                ProfileScreen()
+                ProfileScreen(
+                    onBackClick = {
+                        bottomNavController.popBackStack()
+                    },
+                    onAddressesClick = {
+                        bottomNavController.navigate("addresses")
+                    },
+                    onPaymentMethodsClick = {
+                        bottomNavController.navigate("payment_methods")
+                    },
+                    onOrdersClick = {
+                        bottomNavController.navigate(BottomNavItem.Orders.route)
+                    },
+                    onSettingsClick = {
+                    },
+                    onLogoutClick = {
+                        session.clearSession()
+
+                        rootNavController.navigate("login") {
+                            popUpTo("main") { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    }
+                )
             }
 
             composable("product_detail") {
@@ -116,7 +162,7 @@ private fun MainScreenContainer() {
                                     )
 
                                     val response = RetrofitClient.cartApiService.addItemToCart(
-                                        userId = 1,
+                                        userId = session.getUserId(),
                                         request = request
                                     )
 
@@ -158,6 +204,7 @@ private fun MainScreenContainer() {
                     }
                 )
             }
+
             composable("checkout") {
                 CheckoutScreen(
                     onBack = {
@@ -174,6 +221,7 @@ private fun MainScreenContainer() {
                     }
                 )
             }
+
             composable("order_detail/{orderId}") { backStackEntry ->
                 val orderId = backStackEntry.arguments?.getString("orderId")?.toIntOrNull()
 
@@ -185,6 +233,18 @@ private fun MainScreenContainer() {
                         }
                     )
                 }
+            }
+
+            composable("addresses") {
+                AddressesScreen(
+                    onBackClick = { bottomNavController.popBackStack() }
+                )
+            }
+
+            composable("payment_methods") {
+                PaymentMethodsScreen(
+                    onBackClick = { bottomNavController.popBackStack() }
+                )
             }
         }
     }

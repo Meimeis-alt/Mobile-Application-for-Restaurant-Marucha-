@@ -20,7 +20,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.example.maruchapp.data.local.SessionManager
 import com.example.maruchapp.data.model.OrderSummaryDto
 import com.example.maruchapp.data.remote.RetrofitClient
 
@@ -28,13 +30,17 @@ import com.example.maruchapp.data.remote.RetrofitClient
 fun OrdersScreen(
     onOrderClick: (Int) -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val sessionManager = remember { SessionManager(context) }
+    val userId = sessionManager.getUserId()
+
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var orders by remember { mutableStateOf<List<OrderSummaryDto>>(emptyList()) }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(userId) {
         try {
-            val response = RetrofitClient.orderApiService.getUserOrders(userId = 1)
+            val response = RetrofitClient.orderApiService.getUserOrders(userId = userId)
 
             if (response.isSuccessful && response.body()?.success == true) {
                 orders = response.body()?.data ?: emptyList()
@@ -123,7 +129,7 @@ private fun OrderCard(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
         onClick = onClick
-    )  {
+    ) {
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
