@@ -28,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.example.maruchapp.data.local.SessionManager
 import com.example.maruchapp.data.model.AddressDto
 import com.example.maruchapp.data.model.CartItemDto
 import com.example.maruchapp.data.model.OrderCreateRequest
@@ -39,6 +40,10 @@ fun CheckoutScreen(
     onBack: () -> Unit = {},
     onOrderCreated: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val sessionManager = remember { SessionManager(context) }
+    val userId = sessionManager.getUserId()
+
     var isLoading by remember { mutableStateOf(true) }
     var isSubmitting by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -52,12 +57,11 @@ fun CheckoutScreen(
     var observaciones by remember { mutableStateOf("") }
 
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(userId) {
         try {
-            val cartResponse = RetrofitClient.cartApiService.getActiveCart(userId = 1)
-            val addressResponse = RetrofitClient.addressApiService.getUserAddresses(userId = 1)
+            val cartResponse = RetrofitClient.cartApiService.getActiveCart(userId = userId)
+            val addressResponse = RetrofitClient.addressApiService.getUserAddresses(userId = userId)
 
             if (cartResponse.isSuccessful && cartResponse.body()?.success == true) {
                 val cartData = cartResponse.body()?.data
@@ -69,8 +73,10 @@ fun CheckoutScreen(
 
             if (addressResponse.isSuccessful && addressResponse.body()?.success == true) {
                 addresses = addressResponse.body()?.data ?: emptyList()
-                selectedAddressId = addresses.firstOrNull { it.es_principal == 1 }?.id_direccion
-                    ?: addresses.firstOrNull()?.id_direccion
+
+                selectedAddressId =
+                    addresses.firstOrNull { it.esPrincipal == 1 }?.idDireccion
+                        ?: addresses.firstOrNull()?.idDireccion
             } else if (errorMessage == null) {
                 errorMessage = addressResponse.body()?.message ?: "No se pudieron obtener las direcciones"
             }
@@ -94,7 +100,7 @@ fun CheckoutScreen(
                 isSubmitting = true
 
                 val response = RetrofitClient.orderApiService.createOrder(
-                    userId = 1,
+                    userId = userId,
                     request = OrderCreateRequest(
                         id_direccion = addressId,
                         id_metodo_pago = selectedPaymentMethodId,
@@ -244,9 +250,9 @@ fun CheckoutScreen(
                                             modifier = Modifier.padding(top = 8.dp)
                                         ) {
                                             RadioButton(
-                                                selected = selectedAddressId == address.id_direccion,
+                                                selected = selectedAddressId == address.idDireccion,
                                                 onClick = {
-                                                    selectedAddressId = address.id_direccion
+                                                    selectedAddressId = address.idDireccion
                                                 }
                                             )
 
@@ -254,7 +260,7 @@ fun CheckoutScreen(
                                                 modifier = Modifier.padding(top = 10.dp)
                                             ) {
                                                 Text(address.alias ?: "Dirección")
-                                                Text(address.direccion_texto)
+                                                Text(address.direccionTexto)
 
                                                 if (!address.referencia.isNullOrBlank()) {
                                                     Text(address.referencia)

@@ -119,23 +119,24 @@ class Order
     }
 
     public function findPaymentMethodById(int $paymentMethodId): array|false
-    {
-        $sql = "
-            SELECT
-                id_metodo_pago,
-                nombre,
-                descripcion
-            FROM metodo_pago
-            WHERE id_metodo_pago = :id_metodo_pago
-            LIMIT 1
-        ";
+{
+    $sql = "
+        SELECT
+            id_metodo_pago,
+            nombre,
+            descripcion,
+            activo
+        FROM metodo_pago
+        WHERE id_metodo_pago = :id_metodo_pago
+        LIMIT 1
+    ";
 
-        $stmt = $this->connection->prepare($sql);
-        $stmt->bindValue(':id_metodo_pago', $paymentMethodId, PDO::PARAM_INT);
-        $stmt->execute();
+    $stmt = $this->connection->prepare($sql);
+    $stmt->bindValue(':id_metodo_pago', $paymentMethodId, PDO::PARAM_INT);
+    $stmt->execute();
 
-        return $stmt->fetch();
-    }
+    return $stmt->fetch();
+}
 
     public function findOrderStatusById(int $statusId): array|false
     {
@@ -348,4 +349,5 @@ class Order
 
         return $stmt->execute();
     }
+    
 }

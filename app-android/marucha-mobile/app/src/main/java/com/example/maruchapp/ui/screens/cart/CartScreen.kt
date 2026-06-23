@@ -25,7 +25,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.example.maruchapp.data.local.SessionManager
 import com.example.maruchapp.data.model.CartItemDto
 import com.example.maruchapp.data.model.CartUpdateRequest
 import com.example.maruchapp.data.remote.RetrofitClient
@@ -36,6 +38,10 @@ fun CartScreen(
     onBack: () -> Unit = {},
     onContinueCheckout: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val sessionManager = remember { SessionManager(context) }
+    val userId = sessionManager.getUserId()
+
     var isLoading by remember { mutableStateOf(true) }
     var isUpdating by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -47,7 +53,7 @@ fun CartScreen(
     suspend fun loadCart() {
         try {
             isLoading = true
-            val response = RetrofitClient.cartApiService.getActiveCart(userId = 1)
+            val response = RetrofitClient.cartApiService.getActiveCart(userId = userId)
 
             if (response.isSuccessful && response.body()?.success == true) {
                 val cartData = response.body()?.data
@@ -118,7 +124,7 @@ fun CartScreen(
         }
     }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(userId) {
         loadCart()
     }
 

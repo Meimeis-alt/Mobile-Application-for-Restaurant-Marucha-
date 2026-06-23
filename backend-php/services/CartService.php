@@ -8,6 +8,8 @@ require_once __DIR__ . '/../models/Product.php';
 
 class CartService
 {
+    private const MAX_ITEM_QUANTITY = 8;
+
     private Cart $cartModel;
     private User $userModel;
     private Product $productModel;
@@ -102,6 +104,17 @@ class CartService
             ];
         }
 
+        if ($quantity > self::MAX_ITEM_QUANTITY) {
+            return [
+                'success' => false,
+                'status'  => 422,
+                'message' => 'Validation errors',
+                'data'    => [
+                    'cantidad' => 'You cannot add more than 8 units of the same product.'
+                ]
+            ];
+        }
+
         $product = $this->productModel->findById($productId);
 
         if (!$product) {
@@ -109,6 +122,14 @@ class CartService
                 'success' => false,
                 'status'  => 404,
                 'message' => 'Product not found'
+            ];
+        }
+
+        if (isset($product['disponible']) && (int)$product['disponible'] !== 1) {
+            return [
+                'success' => false,
+                'status'  => 409,
+                'message' => 'This product is currently unavailable'
             ];
         }
 
@@ -123,25 +144,54 @@ class CartService
         $existingItem = $this->cartModel->findCartItemByCartAndPlatillo($cartId, $productId);
 
         $price = (float)$product['precio'];
-        $subtotal = $price * $quantity;
 
         if ($existingItem) {
             $newQuantity = (int)$existingItem['cantidad'] + $quantity;
+
+            if ($newQuantity > self::MAX_ITEM_QUANTITY) {
+                return [
+                    'success' => false,
+                    'status'  => 422,
+                    'message' => 'Validation errors',
+                    'data'    => [
+                        'cantidad' => 'You cannot have more than 8 units of the same product in the cart.'
+                    ]
+                ];
+            }
+
             $newSubtotal = $price * $newQuantity;
 
-            $this->cartModel->updateCartItem((int)$existingItem['id_carrito_detalle'], [
+            $updated = $this->cartModel->updateCartItem((int)$existingItem['id_carrito_detalle'], [
                 'cantidad'        => $newQuantity,
                 'precio_unitario' => $price,
                 'subtotal'        => $newSubtotal
             ]);
+
+            if (!$updated) {
+                return [
+                    'success' => false,
+                    'status'  => 500,
+                    'message' => 'Failed to update cart item'
+                ];
+            }
         } else {
-            $this->cartModel->createCartItem([
+            $subtotal = $price * $quantity;
+
+            $created = $this->cartModel->createCartItem([
                 'id_carrito'      => $cartId,
                 'id_platillo'     => $productId,
                 'cantidad'        => $quantity,
                 'precio_unitario' => $price,
                 'subtotal'        => $subtotal
             ]);
+
+            if (!$created) {
+                return [
+                    'success' => false,
+                    'status'  => 500,
+                    'message' => 'Failed to add product to cart'
+                ];
+            }
         }
 
         return $this->getActiveCartByUserId($userId);
@@ -179,6 +229,17 @@ class CartService
                 'message' => 'Validation errors',
                 'data'    => [
                     'cantidad' => 'The field "cantidad" must be greater than 0.'
+                ]
+            ];
+        }
+
+        if ($quantity > self::MAX_ITEM_QUANTITY) {
+            return [
+                'success' => false,
+                'status'  => 422,
+                'message' => 'Validation errors',
+                'data'    => [
+                    'cantidad' => 'You cannot set more than 8 units of the same product.'
                 ]
             ];
         }

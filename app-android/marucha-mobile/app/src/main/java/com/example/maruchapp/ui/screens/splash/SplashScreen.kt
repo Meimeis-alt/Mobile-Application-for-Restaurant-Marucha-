@@ -9,15 +9,27 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import com.example.maruchapp.data.local.SessionManager
 import kotlinx.coroutines.delay
 
 @Composable
 fun SplashScreen(
-    onNavigateToLogin: () -> Unit
+    onNavigateToLogin: () -> Unit,
+    onNavigateToMain: () -> Unit
 ) {
+    val context = LocalContext.current
+
     LaunchedEffect(Unit) {
         delay(1500)
-        onNavigateToLogin()
+
+        val sessionManager = SessionManager(context)
+
+        if (sessionManager.isLoggedIn()) {
+            onNavigateToMain()
+        } else {
+            onNavigateToLogin()
+        }
     }
 
     Column(
