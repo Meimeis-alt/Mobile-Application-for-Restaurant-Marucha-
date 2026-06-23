@@ -114,17 +114,26 @@ fun LoginScreen(
                                 if (response.isSuccessful && response.body()?.success == true) {
                                     val loggedUserId = response.body()?.data?.user?.id_usuario
 
-                                    if (loggedUserId != null) {
+                                    if (loggedUserId != null && loggedUserId > 0) {
+                                        sessionManager.clearSession()
+
+                                        android.util.Log.d(
+                                            "LOGIN_DEBUG",
+                                            "Guardando sesión con userId=$loggedUserId"
+                                        )
+
                                         sessionManager.saveLoginSession(userId = loggedUserId)
+
+                                        android.util.Log.d(
+                                            "LOGIN_DEBUG",
+                                            "Sesión guardada. getUserId()=${sessionManager.getUserId()}"
+                                        )
+
                                         resultMessage = "Login correcto"
                                         onLoginSuccess()
                                     } else {
                                         resultMessage = "No se pudo obtener la sesión del usuario"
                                     }
-                                    resultMessage = "Login correcto"
-                                    onLoginSuccess()
-                                } else {
-                                    resultMessage = response.body()?.message ?: "Login failed"
                                 }
                             } catch (e: Exception) {
                                 resultMessage = "ERROR: ${e.message}"

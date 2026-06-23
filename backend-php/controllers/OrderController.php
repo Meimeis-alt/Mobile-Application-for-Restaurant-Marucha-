@@ -15,37 +15,41 @@ class OrderController
     }
 
     public function store(int $userId): void
-    {
-        try {
-            $requestData = json_decode(file_get_contents('php://input'), true);
+{
+    try {
+        $requestData = json_decode(file_get_contents('php://input'), true);
 
-            if (!is_array($requestData)) {
-                Response::error('Invalid JSON body', 400);
-            }
+        if (!is_array($requestData)) {
+            Response::error('Invalid JSON body', 400);
+        }
 
-            $result = $this->orderService->createOrder($userId, $requestData);
+        $result = $this->orderService->createOrder($userId, $requestData);
 
-            if (!$result['success']) {
-                Response::error(
-                    $result['message'],
-                    $result['status'],
-                    $result['data'] ?? null
-                );
-            }
-
-            Response::success(
-                $result['message'],
-                $result['data'],
-                $result['status']
-            );
-        } catch (Throwable $e) {
+        if (!$result['success']) {
             Response::error(
-                'Error creating order',
-                500,
-                ['error' => $e->getMessage()]
+                $result['message'],
+                $result['status'],
+                $result['data'] ?? null
             );
         }
+
+        Response::success(
+            $result['message'],
+            $result['data'],
+            $result['status']
+        );
+    } catch (Throwable $e) {
+        Response::error(
+            'Error creating order',
+            500,
+            [
+                'error' => $e->getMessage(),
+                'file'  => $e->getFile(),
+                'line'  => $e->getLine()
+            ]
+        );
     }
+}
 
     public function indexByUser(int $userId): void
     {

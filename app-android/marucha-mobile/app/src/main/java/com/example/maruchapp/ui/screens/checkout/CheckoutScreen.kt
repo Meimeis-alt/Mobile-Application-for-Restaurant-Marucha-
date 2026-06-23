@@ -1,5 +1,6 @@
 package com.example.maruchapp.ui.screens.checkout
 
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -53,13 +54,15 @@ fun CheckoutScreen(
     var addresses by remember { mutableStateOf<List<AddressDto>>(emptyList()) }
 
     var selectedAddressId by remember { mutableStateOf<Int?>(null) }
-    var selectedPaymentMethodId by remember { mutableStateOf(1) }
+    var selectedPaymentMethodId by remember { mutableStateOf(1) } // 1=Yape, 2=Efectivo
     var observaciones by remember { mutableStateOf("") }
 
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(userId) {
         try {
+            Log.d("CHECKOUT_DEBUG", "Iniciando checkout con userId=$userId")
+
             val cartResponse = RetrofitClient.cartApiService.getActiveCart(userId = userId)
             val addressResponse = RetrofitClient.addressApiService.getUserAddresses(userId = userId)
 
@@ -67,8 +70,17 @@ fun CheckoutScreen(
                 val cartData = cartResponse.body()?.data
                 cartItems = cartData?.items ?: emptyList()
                 total = cartData?.total ?: 0.0
+
+                Log.d(
+                    "CHECKOUT_DEBUG",
+                    "Carrito cargado -> items=${cartItems.size}, total=$total"
+                )
             } else {
                 errorMessage = cartResponse.body()?.message ?: "No se pudo obtener el carrito"
+                Log.d(
+                    "CHECKOUT_DEBUG",
+                    "Error cargando carrito -> ${cartResponse.body()?.message}"
+                )
             }
 
             if (addressResponse.isSuccessful && addressResponse.body()?.success == true) {
@@ -77,39 +89,87 @@ fun CheckoutScreen(
                 selectedAddressId =
                     addresses.firstOrNull { it.esPrincipal == 1 }?.idDireccion
                         ?: addresses.firstOrNull()?.idDireccion
+
+                Log.d(
+                    "CHECKOUT_DEBUG",
+                    "Direcciones cargadas -> addresses=$addresses, selectedAddressId=$selectedAddressId"
+                )
             } else if (errorMessage == null) {
                 errorMessage = addressResponse.body()?.message ?: "No se pudieron obtener las direcciones"
+                Log.d(
+                    "CHECKOUT_DEBUG",
+                    "Error cargando direcciones -> ${addressResponse.body()?.message}"
+                )
             }
 
         } catch (e: Exception) {
             errorMessage = "Error: ${e.message}"
+            Log.e("CHECKOUT_DEBUG", "Excepción cargando checkout", e)
         } finally {
             isLoading = false
         }
     }
 
     fun confirmOrder() {
-        val addressId = selectedAddressId
-        if (addressId == null) {
-            Toast.makeText(context, "Selecciona una dirección", Toast.LENGTH_SHORT).show()
+        if (cartItems.isEmpty()) {
+            Toast.makeText(context, "Tu carrito está vacío", Toast.LENGTH_SHORT).show()
             return
         }
+
+        if (addresses.isEmpty()) {
+            Toast.makeText(context, "No tienes direcciones registradas", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val validAddress = addresses.firstOrNull { it.idDireccion == selectedAddressId }
+            ?: addresses.firstOrNull { it.esPrincipal == 1 }
+            ?: addresses.firstOrNull()
+
+        if (validAddress == null) {
+            Toast.makeText(context, "No se encontró una dirección válida", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        selectedAddressId = validAddress.idDireccion
 
         scope.launch {
             try {
                 isSubmitting = true
 
+                Log.d(
+                    "CHECKOUT_DEBUG",
+                    "ENVIANDO PEDIDO -> userId=$userId, id_direccion=${validAddress.idDireccion}, id_metodo_pago=$selectedPaymentMethodId, observaciones=$observaciones"
+                )
+
+                Toast.makeText(
+                    context,
+                    "DEBUG -> userId=$userId, direccion=${validAddress.idDireccion}",
+                    Toast.LENGTH_LONG
+                ).show()
+
                 val response = RetrofitClient.orderApiService.createOrder(
                     userId = userId,
                     request = OrderCreateRequest(
-                        id_direccion = addressId,
+                        id_direccion = validAddress.idDireccion,
                         id_metodo_pago = selectedPaymentMethodId,
                         observaciones = observaciones.ifBlank { null }
                     )
                 )
 
-                if (response.isSuccessful && response.body()?.success == true) {
-                    val orderNumber = response.body()?.data?.order?.numero_pedido
+                val responseBody = response.body()
+                val rawError = try {
+                    response.errorBody()?.string()
+                } catch (e: Exception) {
+                    null
+                }
+
+                Log.d(
+                    "CHECKOUT_DEBUG",
+                    "RESPUESTA PEDIDO -> code=${response.code()}, body=$responseBody, rawError=$rawError"
+                )
+
+                if (response.isSuccessful && responseBody?.success == true) {
+                    val orderNumber = responseBody.data?.order?.numero_pedido
 
                     Toast.makeText(
                         context,
@@ -125,11 +185,14 @@ fun CheckoutScreen(
                 } else {
                     Toast.makeText(
                         context,
-                        response.body()?.message ?: "No se pudo crear el pedido",
+                        responseBody?.message ?: rawError ?: "No se pudo crear el pedido",
                         Toast.LENGTH_LONG
                     ).show()
                 }
+
             } catch (e: Exception) {
+                Log.e("CHECKOUT_DEBUG", "Excepción al crear pedido", e)
+
                 Toast.makeText(
                     context,
                     "Error: ${e.message}",
@@ -253,6 +316,10 @@ fun CheckoutScreen(
                                                 selected = selectedAddressId == address.idDireccion,
                                                 onClick = {
                                                     selectedAddressId = address.idDireccion
+                                                    Log.d(
+                                                        "CHECKOUT_DEBUG",
+                                                        "Dirección seleccionada manualmente -> $selectedAddressId"
+                                                    )
                                                 }
                                             )
 
@@ -263,7 +330,7 @@ fun CheckoutScreen(
                                                 Text(address.direccionTexto)
 
                                                 if (!address.referencia.isNullOrBlank()) {
-                                                    Text(address.referencia)
+                                                    Text(address.referencia!!)
                                                 }
                                             }
                                         }
@@ -295,12 +362,6 @@ fun CheckoutScreen(
                                     selected = selectedPaymentMethodId == 2,
                                     onClick = { selectedPaymentMethodId = 2 }
                                 )
-
-                                PaymentOption(
-                                    title = "Tarjeta",
-                                    selected = selectedPaymentMethodId == 3,
-                                    onClick = { selectedPaymentMethodId = 3 }
-                                )
                             }
                         }
                     }
@@ -319,7 +380,7 @@ fun CheckoutScreen(
                         Button(
                             onClick = { confirmOrder() },
                             modifier = Modifier.fillMaxWidth(),
-                            enabled = !isSubmitting && addresses.isNotEmpty()
+                            enabled = !isSubmitting && addresses.isNotEmpty() && cartItems.isNotEmpty()
                         ) {
                             Text(if (isSubmitting) "Procesando..." else "Confirmar pedido")
                         }
