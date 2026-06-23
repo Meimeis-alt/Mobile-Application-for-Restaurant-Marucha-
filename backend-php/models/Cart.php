@@ -196,16 +196,16 @@ class Cart
     }
 
     public function markCartAsCompleted(int $cartId): bool
-    {
-        $sql = "
-            UPDATE carrito
-            SET estado = 'cerrado'
-            WHERE id_carrito = :id_carrito
-        ";
+{
+    $sql = "
+        UPDATE carrito
+        SET estado = 'convertido'
+        WHERE id_carrito = :id_carrito
+    ";
 
-        $stmt = $this->connection->prepare($sql);
-        $stmt->bindValue(':id_carrito', $cartId, PDO::PARAM_INT);
+    $stmt = $this->connection->prepare($sql);
+    $stmt->bindValue(':id_carrito', $cartId, PDO::PARAM_INT);
 
-        return $stmt->execute();
-    }
+    return $stmt->execute();
+}
 }

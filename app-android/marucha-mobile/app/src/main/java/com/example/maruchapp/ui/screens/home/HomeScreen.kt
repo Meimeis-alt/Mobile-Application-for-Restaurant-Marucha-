@@ -20,6 +20,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -37,6 +38,9 @@ fun HomeScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var products by remember { mutableStateOf<List<ProductDto>>(emptyList()) }
     var selectedCategory by remember { mutableStateOf<String?>(null) }
+
+    // NUEVO: texto del buscador
+    var searchQuery by remember { mutableStateOf("") }
 
     val scope = rememberCoroutineScope()
 
@@ -89,8 +93,23 @@ fun HomeScreen(
         }
     }
 
-    val visibleProducts = remember(groupedProducts, selectedCategory) {
+    // Productos base de la categoría seleccionada
+    val categoryProducts = remember(groupedProducts, selectedCategory) {
         groupedProducts[selectedCategory].orEmpty()
+    }
+
+    // NUEVO: filtro en tiempo real
+    val visibleProducts = remember(categoryProducts, searchQuery) {
+        val query = searchQuery.trim()
+
+        if (query.isBlank()) {
+            categoryProducts
+        } else {
+            categoryProducts.filter { product ->
+                product.nombre.contains(query, ignoreCase = true) ||
+                        (product.descripcion?.contains(query, ignoreCase = true) == true)
+            }
+        }
     }
 
     when {
@@ -148,6 +167,18 @@ fun HomeScreen(
                             modifier = Modifier.padding(bottom = 12.dp)
                         )
 
+                        // NUEVO: BUSCADOR
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            label = { Text("Buscar platillo") },
+                            placeholder = { Text("Ej: arroz, pollo, chicha...") }
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -177,7 +208,11 @@ fun HomeScreen(
 
                 item {
                     Text(
-                        text = selectedCategory ?: "Productos",
+                        text = if (searchQuery.isBlank()) {
+                            selectedCategory ?: "Productos"
+                        } else {
+                            "Resultados en ${selectedCategory ?: "Productos"}"
+                        },
                         style = MaterialTheme.typography.headlineSmall,
                         modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
                     )
@@ -186,7 +221,11 @@ fun HomeScreen(
                 if (visibleProducts.isEmpty()) {
                     item {
                         Text(
-                            text = "No hay productos en esta categoría",
+                            text = if (searchQuery.isBlank()) {
+                                "No hay productos en esta categoría"
+                            } else {
+                                "No se encontraron productos con \"$searchQuery\""
+                            },
                             style = MaterialTheme.typography.bodyLarge
                         )
                     }

@@ -18,7 +18,11 @@ class SessionManager(context: Context) {
     }
 
     fun getUserId(): Int {
-        return prefs.getInt("user_id", 1)
+        return prefs.getInt("user_id", -1)
+    }
+
+    fun hasValidSession(): Boolean {
+        return isLoggedIn() && getUserId() > 0
     }
 
     fun clearSession() {

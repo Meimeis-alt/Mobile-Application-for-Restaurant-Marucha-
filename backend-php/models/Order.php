@@ -14,6 +14,14 @@ class Order
         $this->connection = $database->connect();
     }
 
+    /**
+     * Devuelve la conexión PDO para que el Service pueda manejar transacciones.
+     */
+    public function getConnection(): PDO
+    {
+        return $this->connection;
+    }
+
     public function generateOrderNumber(): string
     {
         return 'MAR-' . date('YmdHis') . '-' . random_int(1, 9);
@@ -119,24 +127,24 @@ class Order
     }
 
     public function findPaymentMethodById(int $paymentMethodId): array|false
-{
-    $sql = "
-        SELECT
-            id_metodo_pago,
-            nombre,
-            descripcion,
-            activo
-        FROM metodo_pago
-        WHERE id_metodo_pago = :id_metodo_pago
-        LIMIT 1
-    ";
+    {
+        $sql = "
+            SELECT
+                id_metodo_pago,
+                nombre,
+                descripcion,
+                activo
+            FROM metodo_pago
+            WHERE id_metodo_pago = :id_metodo_pago
+            LIMIT 1
+        ";
 
-    $stmt = $this->connection->prepare($sql);
-    $stmt->bindValue(':id_metodo_pago', $paymentMethodId, PDO::PARAM_INT);
-    $stmt->execute();
+        $stmt = $this->connection->prepare($sql);
+        $stmt->bindValue(':id_metodo_pago', $paymentMethodId, PDO::PARAM_INT);
+        $stmt->execute();
 
-    return $stmt->fetch();
-}
+        return $stmt->fetch();
+    }
 
     public function findOrderStatusById(int $statusId): array|false
     {
@@ -274,8 +282,9 @@ class Order
             SELECT
                 p.id_pedido,
                 p.id_usuario,
-                CONCAT(u.nombre, ' ', u.apellido) AS cliente_nombre,
-                u.email AS cliente_email,
+                u.nombre,
+                u.apellido,
+                u.email,
                 p.id_direccion,
                 p.id_estado_pedido,
                 ep.nombre AS estado_nombre,
@@ -294,52 +303,16 @@ class Order
             ORDER BY p.id_pedido DESC
         ";
 
-        $stmt = $this->connection->prepare($sql);
-        $stmt->execute();
-
+        $stmt = $this->connection->query($sql);
         return $stmt->fetchAll();
-    }
-
-    public function getAdminOrderById(int $orderId): array|false
-    {
-        $sql = "
-            SELECT
-                p.id_pedido,
-                p.id_usuario,
-                CONCAT(u.nombre, ' ', u.apellido) AS cliente_nombre,
-                u.email AS cliente_email,
-                u.telefono AS cliente_telefono,
-                p.id_direccion,
-                p.id_estado_pedido,
-                ep.nombre AS estado_nombre,
-                p.id_metodo_pago,
-                mp.nombre AS metodo_pago_nombre,
-                p.numero_pedido,
-                p.subtotal,
-                p.total,
-                p.observaciones,
-                p.fecha_pedido,
-                p.fecha_actualizacion
-            FROM pedido p
-            INNER JOIN usuario u ON u.id_usuario = p.id_usuario
-            INNER JOIN estado_pedido ep ON ep.id_estado_pedido = p.id_estado_pedido
-            INNER JOIN metodo_pago mp ON mp.id_metodo_pago = p.id_metodo_pago
-            WHERE p.id_pedido = :id_pedido
-            LIMIT 1
-        ";
-
-        $stmt = $this->connection->prepare($sql);
-        $stmt->bindValue(':id_pedido', $orderId, PDO::PARAM_INT);
-        $stmt->execute();
-
-        return $stmt->fetch();
     }
 
     public function updateOrderStatus(int $orderId, int $statusId): bool
     {
         $sql = "
             UPDATE pedido
-            SET id_estado_pedido = :id_estado_pedido
+            SET
+                id_estado_pedido = :id_estado_pedido
             WHERE id_pedido = :id_pedido
         ";
 
@@ -349,5 +322,4 @@ class Order
 
         return $stmt->execute();
     }
-    
 }

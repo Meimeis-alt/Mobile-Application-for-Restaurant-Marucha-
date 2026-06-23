@@ -1,5 +1,6 @@
 package com.example.maruchapp.ui.screens.splash
 
+import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,15 +22,10 @@ fun SplashScreen(
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
-        delay(1500)
-
+        delay(1000)
         val sessionManager = SessionManager(context)
-
-        if (sessionManager.isLoggedIn()) {
-            onNavigateToMain()
-        } else {
-            onNavigateToLogin()
-        }
+        sessionManager.clearSession()
+        onNavigateToLogin()
     }
 
     Column(
